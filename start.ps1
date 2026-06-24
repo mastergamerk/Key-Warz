@@ -4,7 +4,7 @@ $ErrorActionPreference = "SilentlyContinue"
 # =================================================================
 #                 ONLINE API GATEWAY LOCK
 # =================================================================
-$BaseApiUrl = "https://script.google.com/macros/s/AKfycbyn9uf-GUCn_5ivRrcVwhoKck5IwdyoD28Lh5Vhb07bpDV-ORrBmWmqXWCcj6CIk5hUZA/exec"
+$BaseApiUrl = "https://script.google.com/macros/s/AKfycbxrb5Z-xY32hgYOFCCTrIqCMhoi5kvsGWFqK1SCxaIHWiUllWEg231RqflK6BAuttQi/exec"
 
 # ดึงค่า HWID (UUID) ประจำเครื่องคอมพิวเตอร์ของลูกค้าอัตโนมัติ
 $MachineHWID = (Get-CimInstance Win32_ComputerSystemProduct).UUID
