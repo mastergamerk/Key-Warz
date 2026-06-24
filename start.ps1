@@ -36,16 +36,22 @@ try {
 }
 
 # -----------------------------------------------------------------
-# ระบบค้นหาโฟลเดอร์เกมเตรียมไว้ล่วงหน้า (เพื่อใช้ลบไฟล์หากคีย์หมดอายุ)
+# [NEW] ระบบสแกนหาโฟลเดอร์เกมอัจฉริยะ (Smart Scan Deep 4)
 # -----------------------------------------------------------------
 $Drives = @("C:\", "D:\", "E:\", "F:\", "G:\")
 $GamePath = $null
+
 foreach ($Drive in $Drives) {
     if (Test-Path $Drive) {
-        $FindFolder = Get-ChildItem -Path $Drive -Filter "WarZTH_FullClient" -Recurse -Depth 2 -ErrorAction SilentlyContinue | Select-Object -First 1
+        # เปลี่ยนมาหาโฟลเดอร์แกนหลักชื่อ WarZTH ลึกลงไป 4 ชั้น เพื่อข้ามชื่อโฟลเดอร์นอกที่ลูกค้าชอบเปลี่ยนเอง
+        $FindFolder = Get-ChildItem -Path $Drive -Filter "WarZTH" -Recurse -Depth 4 -ErrorAction SilentlyContinue | Where-Object { $_.PSIsContainer } | Select-Object -First 1
         if ($FindFolder) {
-            $GamePath = Join-Path $FindFolder.FullName "WarZTH\Data"
-            break
+            # เช็กความชัวร์ว่ามีโฟลเดอร์ Data อยู่ข้างในจริงไหมก่อนล็อกเป้า
+            $CheckPath = Join-Path $FindFolder.FullName "Data"
+            if (Test-Path $CheckPath) {
+                $GamePath = $CheckPath
+                break
+            }
         }
     }
 }
@@ -67,7 +73,7 @@ elseif ($ApiResponse -eq "KEY_EXPIRED") {
     Write-Host "`n[!] License Expired! Access Denied." -ForegroundColor Red
     Write-Host "[*] Purging active system modules from directory..." -ForegroundColor Yellow
     
-    # หากคีย์หมดอายุ สั่งเจาะทำลายลบโฟลเดอร์มอดบูสทิ้งทันที
+    # หากคีย์หมดอายุ และสแกนเจอที่อยู่เกม สั่งเจาะทำลายลบโฟลเดอร์มอดทิ้งทันที
     if ($null -ne $GamePath) {
         $TargetMenu = Join-Path $GamePath "Menu"
         $TargetObjects = Join-Path $GamePath "ObjectsDepot"
@@ -108,7 +114,7 @@ do {
     $Choice = Read-Host "Select an option (1/2)"
 } while ($Choice -ne "1" -and $Choice -ne "2")
 
-# หากตัวแปรระบบสแกนไม่เจอในตอนแรก ให้ลูกค้าป้อนพาธเอง
+# หากระบบออโต้ยังหาไม่เจอจริง ๆ (เช่น แอบเอาไปซ่อนลึกเกิน 4 ชั้น) ระบบเซฟตี้จะให้กรอกเอง
 if ($null -eq $GamePath) {
     Write-Host "[!] Unable to detect game directory automatically." -ForegroundColor Red
     $UserPath = Read-Host "Please enter your main game path (e.g., D:\WarZTH_FullClient)"
