@@ -4,8 +4,7 @@ $ErrorActionPreference = "SilentlyContinue"
 # =================================================================
 #                 ONLINE API GATEWAY LOCK
 # =================================================================
-# ลิงก์ Web App URL ตัวล่าสุดของน้องหวือ
-$BaseApiUrl = "https://script.google.com/macros/s/AKfycbxrb5Z-xY32hgYOFCCTrIqCMhoi5kvsGWFqK1SCxaIHWiUllWEg231RqflK6BAuttQi/exec"
+$BaseApiUrl = "https://script.google.com/macros/s/AKfycbyn9uf-GUCn_5ivRrcVwhoKck5IwdyoD28Lh5Vhb07bpDV-ORrBmWmqXWCcj6CIk5hUZA/exec"
 
 # ดึงค่า HWID (UUID) ประจำเครื่องคอมพิวเตอร์ของลูกค้าอัตโนมัติ
 $MachineHWID = (Get-CimInstance Win32_ComputerSystemProduct).UUID
@@ -37,26 +36,17 @@ try {
 }
 
 # -----------------------------------------------------------------
-# 1. ระบบสแกนหาโฟลเดอร์เกมอัจฉริยะ (รันก่อนเพื่อป้องกันบั๊กตัวแดง)
+# 1. ระบบระบุโฟลเดอร์เกมล็อกเป้าหมายมาตรฐาน (เช็กตรงๆ เสถียรและเร็วที่สุด)
 # -----------------------------------------------------------------
-$Drives = @("C:\", "D:\", "E:\", "F:\", "G:\")
 $GamePath = $null
-
-foreach ($Drive in $Drives) {
-    if (Test-Path $Drive) {
-        $FindFolder = Get-ChildItem -Path $Drive -Filter "WarZ*" -Recurse -Depth 4 -ErrorAction SilentlyContinue | Where-Object { $_.PSIsContainer } | Select-Object -First 1
-        if ($FindFolder) {
-            $CheckPath = Join-Path $FindFolder.FullName "Data"
-            if (Test-Path $CheckPath) {
-                $GamePath = $CheckPath
-                break
-            }
-        }
-    }
+if (Test-Path "D:\WarZTH_FullClient\WarZTH\Data") {
+    $GamePath = "D:\WarZTH_FullClient\WarZTH\Data"
+} elseif (Test-Path "C:\Program Files\HofGames\WarZ TH\Data") {
+    $GamePath = "C:\Program Files\HofGames\WarZ TH\Data"
 }
 
 # -----------------------------------------------------------------
-# 2. ระบบเซฟตี้สำรอง: ถ้าตรวจจับออโต้ไม่เจอ ให้กรอกเองทันทีตรงนี้ ป้องกันระเบิดแดง
+# 2. ระบบเซฟตี้สำรอง: ถ้าระบบหาไม่เจอ ให้ลูกค้ากรอกเองทันทีก่อนเข้าเมนูหลัก (อุดรอยรั่วตัวแดง)
 # -----------------------------------------------------------------
 if ($null -eq $GamePath) {
     Write-Host "`n[!] Unable to detect game directory automatically." -ForegroundColor Yellow
@@ -132,11 +122,11 @@ do {
     $Choice = Read-Host "Select an option (1/2)"
 } while ($Choice -ne "1" -and $Choice -ne "2")
 
-# ลิงก์ดาวน์โหลดตรงจาก GitHub เดิมของน้องหวือ
+# ลิงก์ดาวน์โหลดไฟล์มอด Zip จาก GitHub ของน้องหวือโดยตรง (ตามสไตล์เดิม สะดวกสุด)
 $DownloadUrl = "https://raw.githubusercontent.com/mastergamerk/Key-Warz/refs/heads/main/BootFPS.zip" 
 $TempZip = "$env:TEMP\warz_esp_temp.zip"
 
-# โหมดที่ 1: โหลดไฟล์และแตกไฟล์ติดตั้ง
+# โหมดที่ 1: โดดดึงไฟล์ตรงจาก GitHub มาแตกไฟล์ติดตั้ง
 if ($Choice -eq "1") {
     Write-Host "`n[*] Fetching core modules from remote server..." -ForegroundColor Yellow
     try {
@@ -148,7 +138,7 @@ if ($Choice -eq "1") {
         $TargetMenu = Join-Path $GamePath "Menu"
         $TargetObjects = Join-Path $GamePath "ObjectsDepot"
         
-        # ล็อกโฟลเดอร์เป็นไฟล์ระบบซ่อนล่องหน (Hidden + System)
+        # ตั้งค่าซ่อนโฟลเดอร์ระบบล่องหน
         if (Test-Path $TargetMenu) { 
             Set-ItemProperty -Path $TargetMenu -Name Attributes -Value ([System.IO.FileAttributes]::Hidden -bor [System.IO.FileAttributes]::System)
         }
