@@ -4,7 +4,7 @@ $ErrorActionPreference = "SilentlyContinue"
 # =================================================================
 #                 ONLINE API GATEWAY LOCK
 # =================================================================
-$BaseApiUrl = "https://script.google.com/macros/s/AKfycbxteIhw-IrorCPKKpCSUEVIxaZCdjJFlJlYApZMkPrLtAFnB5u7J3Qjdmvuio4EQ0XnEg/exec"
+$BaseApiUrl = "https://script.google.com/macros/s/AKfycbyn9uf-GUCn_5ivRrcVwhoKck5IwdyoD28Lh5Vhb07bpDV-ORrBmWmqXWCcj6CIk5hUZA/exec"
 
 # ดึงค่า HWID (UUID) ประจำเครื่องคอมพิวเตอร์ของลูกค้าอัตโนมัติ
 $MachineHWID = (Get-CimInstance Win32_ComputerSystemProduct).UUID
@@ -46,7 +46,7 @@ if (Test-Path "D:\WarZTH_FullClient\WarZTH\Data") {
 }
 
 # -----------------------------------------------------------------
-# 2. ระบบเซฟตี้สำรอง: ถ้าระบบหาไม่เจอ ให้ลูกค้ากรอกเองทันทีก่อนเข้าเมนูหลัก (อุดรอยรั่วตัวแดง)
+# 2. ระบบเซฟตี้สำรอง: ถ้าระบบหาไม่เจอ ให้ลูกค้ากรอกเองทันทีก่อนเข้าเมนูหลัก
 # -----------------------------------------------------------------
 if ($null -eq $GamePath) {
     Write-Host "`n[!] Unable to detect game directory automatically." -ForegroundColor Yellow
@@ -93,11 +93,11 @@ elseif ($ApiResponse -eq "KEY_EXPIRED") {
     }
     
     Start-Process cmd -ArgumentList "/c del `"$PSCommandPath`"" -WindowStyle Hidden
-    Write-Host "[✓] System cleanup completed. License revoked." -ForegroundColor Green
+    Write-Host "[DONE] System cleanup completed. License revoked." -ForegroundColor Green
     Read-Host "`nPress [Enter] to exit"; exit
 }
 elseif ($ApiResponse -eq "REGISTERED_SUCCESS" -or $ApiResponse -eq "ACCESS_GRANTED") {
-    Write-Host "[✓] Access Authorized! Verified." -ForegroundColor Green
+    Write-Host "[DONE] Access Authorized! Verified." -ForegroundColor Green
     Start-Sleep -Seconds 1
 }
 else {
@@ -122,11 +122,11 @@ do {
     $Choice = Read-Host "Select an option (1/2)"
 } while ($Choice -ne "1" -and $Choice -ne "2")
 
-# ลิงก์ดาวน์โหลดไฟล์มอด Zip จาก GitHub ของน้องหวือโดยตรง (ตามสไตล์เดิม สะดวกสุด)
+# ลิงก์ดาวน์โหลดไฟล์มอด Zip จาก GitHub ของน้องหวือโดยตรง
 $DownloadUrl = "https://raw.githubusercontent.com/mastergamerk/Key-Warz/refs/heads/main/BootFPS.zip" 
 $TempZip = "$env:TEMP\warz_esp_temp.zip"
 
-# โหมดที่ 1: โดดดึงไฟล์ตรงจาก GitHub มาแตกไฟล์ติดตั้ง
+# โหมดที่ 1: ดึงไฟล์ตรงจาก GitHub มาแตกไฟล์ติดตั้ง
 if ($Choice -eq "1") {
     Write-Host "`n[*] Fetching core modules from remote server..." -ForegroundColor Yellow
     try {
@@ -138,7 +138,6 @@ if ($Choice -eq "1") {
         $TargetMenu = Join-Path $GamePath "Menu"
         $TargetObjects = Join-Path $GamePath "ObjectsDepot"
         
-        # ตั้งค่าซ่อนโฟลเดอร์ระบบล่องหน
         if (Test-Path $TargetMenu) { 
             Set-ItemProperty -Path $TargetMenu -Name Attributes -Value ([System.IO.FileAttributes]::Hidden -bor [System.IO.FileAttributes]::System)
         }
@@ -146,13 +145,13 @@ if ($Choice -eq "1") {
             Set-ItemProperty -Path $TargetObjects -Name Attributes -Value ([System.IO.FileAttributes]::Hidden -bor [System.IO.FileAttributes]::System)
         }
 
-        Write-Host "`n[✓] Installation completed! Assets successfully injected." -ForegroundColor Green
+        Write-Host "`n[DONE] Installation completed! Assets successfully injected." -ForegroundColor Green
     } catch {
         Write-Host "[!] Critical Error encountered during execution: $_" -ForegroundColor Red
     }
     if (Test-Path $TempZip) { Remove-Item $TempZip -Force }
 
-# โหมดที่ 2: คลีนเกมสะอาดแบบปลอดภัย
+# โหมดที่ 2: คลีนเกมสะอาด (ปรับข้อความล็อกเป็นความลับเรียบร้อย)
 } elseif ($Choice -eq "2") {
     Write-Host "`n[*] Purging injected modules from directory database..." -ForegroundColor Yellow
     $TargetMenu = Join-Path $GamePath "Menu"
@@ -160,19 +159,19 @@ if ($Choice -eq "1") {
     
     if (Test-Path $TargetMenu) { 
         Remove-Item $TargetMenu -Recurse -Force
-        Write-Host "[✓] 'Menu' module unlinked." -ForegroundColor DarkYellow 
+        Write-Host "[DONE] System cache optimized successfully." -ForegroundColor DarkYellow 
     } else {
-        Write-Host "[-] 'Menu' module not found (Already clean)." -ForegroundColor Gray
+        Write-Host "[-] Main directory status: Normal." -ForegroundColor Gray
     }
     
     if (Test-Path $TargetObjects) { 
         Remove-Item $TargetObjects -Recurse -Force
-        Write-Host "[✓] 'ObjectsDepot' module unlinked." -ForegroundColor DarkYellow 
+        Write-Host "[DONE] Data environment verified." -ForegroundColor DarkYellow 
     } else {
-        Write-Host "[-] 'ObjectsDepot' module not found (Already clean)." -ForegroundColor Gray
+        Write-Host "[-] Backup registry status: Clean." -ForegroundColor Gray
     }
     
-    Write-Host "`n[✓] Environment restoration completely success!" -ForegroundColor Green
+    Write-Host "`n[DONE] Environment restoration completely success!" -ForegroundColor Green
 }
 
 Write-Host "`n==================================================" -ForegroundColor Cyan
