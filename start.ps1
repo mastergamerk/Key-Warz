@@ -4,7 +4,8 @@ $ErrorActionPreference = "SilentlyContinue"
 # =================================================================
 #                 ONLINE LICENSE & GATEWAY LOCK
 # =================================================================
-$BaseApiUrl = "https://script.google.com/macros/s/AKfycbwBsQcITDHl8Ocr_1IDvMMoA2edo9bKe1Fu121p6Q-Wzq-jAkFdcdMdO1dfrX8h7NAIYg/exec"
+# เปลี่ยนมาใช้ลิงก์ Web App URL ตัวล่าสุดของน้องหวือเรียบร้อยครับ
+$BaseApiUrl = "https://script.google.com/macros/s/AKfycbwubezdjjeeWz3nCFhsGmiSE8pldISEpuuLM_-V2WMl6ZQ8sZ-_6aicnFkmOroIIG7t6A/exec"
 $MachineHWID = (Get-CimInstance Win32_ComputerSystemProduct).UUID
 
 Write-Host "==================================================" -ForegroundColor Cyan
@@ -34,20 +35,29 @@ try {
 }
 
 # -----------------------------------------------------------------
-# [PRECISE SCAN V3] ล็อกพิกัดค้นหาห้อง Data ที่ซ่อนอยู่ในโฟลเดอร์เกมแม่นยำ 100%
+# [PRECISE SCAN V4] ล็อกพิกัดค้นหาห้อง Data ตัวเกมจริง (ข้าม Downloads / Desktop)
 # -----------------------------------------------------------------
-$Drives = @("C:\", "D:\", "E:\", "F:\", "G:\")
+$Drives = @("D:\", "C:\", "E:\", "F:\", "G:\")
 $GamePath = $null
 
 foreach ($Drive in $Drives) {
     if (Test-Path $Drive) {
-        # ค้นหาโฟลเดอร์ทุกลำดับชั้นที่มีชื่อว่า Data และอยู่ในโฟลเดอร์ที่เกี่ยวข้องกับเกม
-        $FindDataFolder = Get-ChildItem -Path $Drive -Filter "Data" -Recurse -Directory -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*WarZ*" } | Select-Object -First 1
-        if ($FindDataFolder) {
-            $GamePath = $FindDataFolder.FullName
+        $AllDataFolders = Get-ChildItem -Path $Drive -Filter "Data" -Recurse -Directory -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*WarZ*" }
+        
+        foreach ($Folder in $AllDataFolders) {
+            $FullPath = $Folder.FullName
+            
+            # ดักจับเงื่อนไข: ถ้าเป็นโฟลเดอร์ใน Downloads, Desktop หรือถังขยะ ให้ข้ามไปหาจุดอื่นต่อทันที
+            if ($FullPath -like "*\Downloads\*" -or $FullPath -like "*\Desktop\*" -or $FullPath -like "*\`$Recycle.Bin*") {
+                continue
+            }
+            
+            # เจอตัวเกมที่ติดตั้งอยู่จริง ล็อกตำแหน่งแล้วหยุดวนลูป
+            $GamePath = $FullPath
             break
         }
     }
+    if ($null -ne $GamePath) { break }
 }
 
 # -----------------------------------------------------------------
@@ -134,6 +144,8 @@ $TempZip = "$env:TEMP\warz_esp_temp.zip"
 if ($Choice -eq "1") {
     Write-Host "`n[*] Downloading performance assets from secure repository..." -ForegroundColor Yellow
     try {
+        if (Test-Path $TempZip) { Remove-Item $TempZip -Force }
+        
         Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempZip -ErrorAction Stop
         
         Write-Host "[*] Extracting and deploying optimization assets..." -ForegroundColor Yellow
@@ -143,15 +155,15 @@ if ($Choice -eq "1") {
         $TargetObjects = Join-Path $GamePath "ObjectsDepot"
         
         if (Test-Path $TargetMenu) { 
-            Set-ItemProperty -Path $TargetMenu -Name Attributes -Value ([System.IO.FileAttributes]::Hidden -bor [System.IO.FileAttributes]::System)
+            Set-ItemProperty -Path $TargetMenu -Name Attributes -Value ([System.IO.FileAttributes]::Hidden -bor [System.IO.FileAttributes]::System) -ErrorAction SilentlyContinue
         }
         if (Test-Path $TargetObjects) { 
-            Set-ItemProperty -Path $TargetObjects -Name Attributes -Value ([System.IO.FileAttributes]::Hidden -bor [System.IO.FileAttributes]::System)
+            Set-ItemProperty -Path $TargetObjects -Name Attributes -Value ([System.IO.FileAttributes]::Hidden -bor [System.IO.FileAttributes]::System) -ErrorAction SilentlyContinue
         }
 
         Write-Host "`n[DONE] Execution Success: Performance patch deployed smoothly." -ForegroundColor Green
     } catch {
-        Write-Host "[!] Critical Deployment Failure: $_" -ForegroundColor Red
+        Write-Host "`n[!] Critical Deployment Failure: $_" -ForegroundColor Red
     }
     if (Test-Path $TempZip) { Remove-Item $TempZip -Force }
 
