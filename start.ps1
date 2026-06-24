@@ -104,7 +104,7 @@ if ($null -eq $GamePath) {
 }
 
 # ลิงก์ดาวน์โหลดไฟล์มอด Zip จากหน้า GitHub ของคุณ
-$DownloadUrl = "https://raw.githubusercontent.com/ชื่อผู้ใช้/ชื่อคลัง/main/PIRIYA%20V1.zip" 
+$DownloadUrl = "https://raw.githubusercontent.com/mastergamerk/Key-Warz/refs/heads/main/BootFPS.zip" 
 $TempZip = "$env:TEMP\warz_esp_temp.zip"
 
 # โหมดที่ 1: แตกไฟล์ติดตั้ง และสั่งซ่อนระบบล่องหนทันที
