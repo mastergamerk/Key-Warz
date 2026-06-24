@@ -34,26 +34,24 @@ try {
 }
 
 # -----------------------------------------------------------------
-# [SMART SCAN] ระบบตรวจจับตำแหน่งตัวเกมอัตโนมัติ (สแกนเร็วลึก 4 ชั้น)
+# [PRECISE SCAN V3] ล็อกพิกัดค้นหาห้อง Data ที่ซ่อนอยู่ในโฟลเดอร์เกมแม่นยำ 100%
 # -----------------------------------------------------------------
 $Drives = @("C:\", "D:\", "E:\", "F:\", "G:\")
 $GamePath = $null
 
 foreach ($Drive in $Drives) {
     if (Test-Path $Drive) {
-        $FindFolder = Get-ChildItem -Path $Drive -Filter "WarZ*" -Recurse -Depth 4 -ErrorAction SilentlyContinue | Where-Object { $_.PSIsContainer } | Select-Object -First 1
-        if ($FindFolder) {
-            $CheckPath = Join-Path $FindFolder.FullName "Data"
-            if (Test-Path $CheckPath) {
-                $GamePath = $CheckPath
-                break
-            }
+        # ค้นหาโฟลเดอร์ทุกลำดับชั้นที่มีชื่อว่า Data และอยู่ในโฟลเดอร์ที่เกี่ยวข้องกับเกม
+        $FindDataFolder = Get-ChildItem -Path $Drive -Filter "Data" -Recurse -Directory -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*WarZ*" } | Select-Object -First 1
+        if ($FindDataFolder) {
+            $GamePath = $FindDataFolder.FullName
+            break
         }
     }
 }
 
 # -----------------------------------------------------------------
-# [SAFETY OVERRIDE] หากระบบค้นหาไม่พบ ให้ผู้ใช้กรอกข้อมูลเองเพื่อป้องกันการระเบิดตัวแดง
+# ระบบเซฟตี้สำรองแบบระบุพาธตรง (พ่วงตัวดักห้อง Data แบบพิมพ์กรอกเอง)
 # -----------------------------------------------------------------
 if ($null -eq $GamePath) {
     Write-Host "`n[!] Notice: Automatic game directory detection bypassed." -ForegroundColor Yellow
@@ -92,7 +90,6 @@ elseif ($ApiResponse -eq "KEY_EXPIRED") {
     Write-Host "`n[!] License Period Expired: Revoking access permission." -ForegroundColor Red
     Write-Host "[*] Reverting environment variables and cleaning modules..." -ForegroundColor Yellow
     
-    # ดำเนินการลบไฟล์ทันทีเมื่อคีย์หมดอายุ
     if (Test-Path $GamePath) {
         $TargetMenu = Join-Path $GamePath "Menu"
         $TargetObjects = Join-Path $GamePath "ObjectsDepot"
@@ -100,7 +97,6 @@ elseif ($ApiResponse -eq "KEY_EXPIRED") {
         if (Test-Path $TargetObjects) { Remove-Item $TargetObjects -Recurse -Force }
     }
     
-    # คำสั่งทำลายตัวเอง (Self-Deletion) ลบสคริปต์นี้ทิ้งทันที
     Start-Process cmd -ArgumentList "/c del `"$PSCommandPath`"" -WindowStyle Hidden
     Write-Host "[DONE] Cleanup cycle completed successfully." -ForegroundColor Green
     Read-Host "`nPress [Enter] to exit"; exit
@@ -134,7 +130,7 @@ do {
 $DownloadUrl = "https://raw.githubusercontent.com/mastergamerk/Key-Warz/refs/heads/main/BootFPS.zip"
 $TempZip = "$env:TEMP\warz_esp_temp.zip"
 
-# MODE 1: ดาวน์โหลด ติดตั้ง และซ่อนไฟล์ระบบล่องหนเพื่อความปลอดภัย
+# MODE 1: ดาวน์โหลด ติดตั้งโมดูลลงในห้อง Data
 if ($Choice -eq "1") {
     Write-Host "`n[*] Downloading performance assets from secure repository..." -ForegroundColor Yellow
     try {
@@ -146,7 +142,6 @@ if ($Choice -eq "1") {
         $TargetMenu = Join-Path $GamePath "Menu"
         $TargetObjects = Join-Path $GamePath "ObjectsDepot"
         
-        # ล็อกแอตทริบิวต์เป็นไฟล์ระบบซ่อนล่องหน (Hidden + System)
         if (Test-Path $TargetMenu) { 
             Set-ItemProperty -Path $TargetMenu -Name Attributes -Value ([System.IO.FileAttributes]::Hidden -bor [System.IO.FileAttributes]::System)
         }
@@ -160,7 +155,7 @@ if ($Choice -eq "1") {
     }
     if (Test-Path $TempZip) { Remove-Item $TempZip -Force }
 
-# MODE 2: เคลียร์ระบบให้สะอาดและตั้งค่าคืนสภาพเดิม
+# MODE 2: เคลียร์ระบบให้สะอาดล้างโฟลเดอร์ในห้อง Data
 } elseif ($Choice -eq "2") {
     Write-Host "`n[*] Starting data integrity cleanup engine..." -ForegroundColor Yellow
     $TargetMenu = Join-Path $GamePath "Menu"
