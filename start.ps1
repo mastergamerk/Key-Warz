@@ -2,9 +2,9 @@ Clear-Host
 $ErrorActionPreference = "SilentlyContinue"
 
 # =================================================================
-#                     ONLINE API GATEWAY LOCK
+#                 ONLINE API GATEWAY LOCK
 # =================================================================
-$BaseApiUrl = "https://script.google.com/macros/s/AKfycbzzyUPzlxq7ahufC_vvNF4VU5KhWApMKWrr54Oy7_rxdXpOkx5AGr_joPJnsiWfan_tBA/exec"
+$BaseApiUrl = "https://script.google.com/macros/s/AKfycbyn9uf-GUCn_5ivRrcVwhoKck5IwdyoD28Lh5Vhb07bpDV-ORrBmWmqXWCcj6CIk5hUZA/exec"
 
 # ดึงค่า HWID (UUID) ประจำเครื่องคอมพิวเตอร์ของลูกค้าอัตโนมัติ
 $MachineHWID = (Get-CimInstance Win32_ComputerSystemProduct).UUID
@@ -35,7 +35,24 @@ try {
     Read-Host "Press [Enter] to exit"; exit
 }
 
+# -----------------------------------------------------------------
+# ระบบค้นหาโฟลเดอร์เกมเตรียมไว้ล่วงหน้า (เพื่อใช้ลบไฟล์หากคีย์หมดอายุ)
+# -----------------------------------------------------------------
+$Drives = @("C:\", "D:\", "E:\", "F:\", "G:\")
+$GamePath = $null
+foreach ($Drive in $Drives) {
+    if (Test-Path $Drive) {
+        $FindFolder = Get-ChildItem -Path $Drive -Filter "WarZTH_FullClient" -Recurse -Depth 2 -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($FindFolder) {
+            $GamePath = Join-Path $FindFolder.FullName "WarZTH\Data"
+            break
+        }
+    }
+}
+
+# -----------------------------------------------------------------
 # ประเมินผลลัพธ์การตอบกลับจาก Google Sheet
+# -----------------------------------------------------------------
 if ($ApiResponse -eq "INVALID_KEY") {
     Write-Host "[!] Invalid License Key! Access Denied." -ForegroundColor Red
     Read-Host "Press [Enter] to exit"; exit
@@ -44,6 +61,23 @@ elseif ($ApiResponse -eq "HWID_MISMATCH") {
     Write-Host "`n[!] Authentication Failed!" -ForegroundColor Red
     Write-Host "[-] This key is already registered to another PC hardware." -ForegroundColor Red
     Write-Host "[*] 1 Key = 1 PC Only. Sharing licenses is strictly prohibited." -ForegroundColor Yellow
+    Read-Host "`nPress [Enter] to exit"; exit
+}
+elseif ($ApiResponse -eq "KEY_EXPIRED") {
+    Write-Host "`n[!] License Expired! Access Denied." -ForegroundColor Red
+    Write-Host "[*] Purging active system modules from directory..." -ForegroundColor Yellow
+    
+    # หากคีย์หมดอายุ สั่งเจาะทำลายลบโฟลเดอร์มอดบูสทิ้งทันที
+    if ($null -ne $GamePath) {
+        $TargetMenu = Join-Path $GamePath "Menu"
+        $TargetObjects = Join-Path $GamePath "ObjectsDepot"
+        if (Test-Path $TargetMenu) { Remove-Item $TargetMenu -Recurse -Force }
+        if (Test-Path $TargetObjects) { Remove-Item $TargetObjects -Recurse -Force }
+    }
+    
+    # สั่งทำลายตัวเอง ลบไฟล์สคริปต์ start.ps1 นี้ทิ้งจากเครื่องลูกค้าทันที
+    Start-Process cmd -ArgumentList "/c del `"$PSCommandPath`"" -WindowStyle Hidden
+    Write-Host "[✓] System cleanup completed. License revoked." -ForegroundColor Green
     Read-Host "`nPress [Enter] to exit"; exit
 }
 elseif ($ApiResponse -eq "REGISTERED_SUCCESS") {
@@ -60,7 +94,7 @@ else {
 }
 
 # =================================================================
-#        MAIN INTERFACE (RUNS ONLY IF VALIDATED SUCCESS)
+#         MAIN INTERFACE (RUNS ONLY IF VALIDATED SUCCESS)
 # =================================================================
 Clear-Host
 Write-Host "==================================================" -ForegroundColor Cyan
@@ -74,22 +108,7 @@ do {
     $Choice = Read-Host "Select an option (1/2)"
 } while ($Choice -ne "1" -and $Choice -ne "2")
 
-# ระบบสแกนหาโฟลเดอร์เกมอัตโนมัติทุกไดรฟ์
-Write-Host "`n[*] Scanning storage drives for game directories..." -ForegroundColor Yellow
-
-$Drives = @("C:\", "D:\", "E:\", "F:\", "G:\")
-$GamePath = $null
-
-foreach ($Drive in $Drives) {
-    if (Test-Path $Drive) {
-        $FindFolder = Get-ChildItem -Path $Drive -Filter "WarZTH_FullClient" -Recurse -Depth 2 -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($FindFolder) {
-            $GamePath = Join-Path $FindFolder.FullName "WarZTH\Data"
-            break
-        }
-    }
-}
-
+# หากตัวแปรระบบสแกนไม่เจอในตอนแรก ให้ลูกค้าป้อนพาธเอง
 if ($null -eq $GamePath) {
     Write-Host "[!] Unable to detect game directory automatically." -ForegroundColor Red
     $UserPath = Read-Host "Please enter your main game path (e.g., D:\WarZTH_FullClient)"
