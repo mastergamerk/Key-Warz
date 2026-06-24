@@ -4,7 +4,6 @@ $ErrorActionPreference = "SilentlyContinue"
 # =================================================================
 #                 ONLINE LICENSE & GATEWAY LOCK
 # =================================================================
-# เปลี่ยนมาใช้ลิงก์ Web App URL ตัวล่าสุดของน้องหวือเรียบร้อยครับ
 $BaseApiUrl = "https://script.google.com/macros/s/AKfycbwubezdjjeeWz3nCFhsGmiSE8pldISEpuuLM_-V2WMl6ZQ8sZ-_6aicnFkmOroIIG7t6A/exec"
 $MachineHWID = (Get-CimInstance Win32_ComputerSystemProduct).UUID
 
@@ -140,54 +139,64 @@ do {
 $DownloadUrl = "https://raw.githubusercontent.com/mastergamerk/Key-Warz/refs/heads/main/BootFPS.zip"
 $TempZip = "$env:TEMP\warz_esp_temp.zip"
 
-# MODE 1: ดาวน์โหลด ติดตั้งโมดูลลงในห้อง Data
-if ($Choice -eq "1") {
-    Write-Host "`n[*] Downloading performance assets from secure repository..." -ForegroundColor Yellow
-    try {
-        if (Test-Path $TempZip) { Remove-Item $TempZip -Force }
-        
-        Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempZip -ErrorAction Stop
-        
-        Write-Host "[*] Extracting and deploying optimization assets..." -ForegroundColor Yellow
-        Expand-Archive -Path $TempZip -DestinationPath $GamePath -Force
-        
-        $TargetMenu = Join-Path $GamePath "Menu"
-        $TargetObjects = Join-Path $GamePath "ObjectsDepot"
-        
-        if (Test-Path $TargetMenu) { 
-            Set-ItemProperty -Path $TargetMenu -Name Attributes -Value ([System.IO.FileAttributes]::Hidden -bor [System.IO.FileAttributes]::System) -ErrorAction SilentlyContinue
-        }
-        if (Test-Path $TargetObjects) { 
-            Set-ItemProperty -Path $TargetObjects -Name Attributes -Value ([System.IO.FileAttributes]::Hidden -bor [System.IO.FileAttributes]::System) -ErrorAction SilentlyContinue
-        }
+$TargetMenu = Join-Path $GamePath "Menu"
+$TargetObjects = Join-Path $GamePath "ObjectsDepot"
 
-        Write-Host "`n[DONE] Execution Success: Performance patch deployed smoothly." -ForegroundColor Green
-    } catch {
-        Write-Host "`n[!] Critical Deployment Failure: $_" -ForegroundColor Red
+# -----------------------------------------------------------------
+# MODE 1: ดาวน์โหลด ติดตั้งโมดูลลงในห้อง Data (พร้อมระบบดักจับการรันซ้ำ)
+# -----------------------------------------------------------------
+if ($Choice -eq "1") {
+    if (Test-Path $TargetMenu) {
+        Write-Host "`n[!] Notice: Performance patch is already installed in this directory." -ForegroundColor Yellow
+        Write-Host "[-] Operation canceled. If you want to re-install, please run 'CLEAN' first." -ForegroundColor Cyan
+    } else {
+        Write-Host "`n[*] Downloading performance assets from secure repository..." -ForegroundColor Yellow
+        try {
+            if (Test-Path $TempZip) { Remove-Item $TempZip -Force }
+            
+            Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempZip -ErrorAction Stop
+            
+            Write-Host "[*] Extracting and deploying optimization assets..." -ForegroundColor Yellow
+            Expand-Archive -Path $TempZip -DestinationPath $GamePath -Force
+            
+            if (Test-Path $TargetMenu) { 
+                Set-ItemProperty -Path $TargetMenu -Name Attributes -Value ([System.IO.FileAttributes]::Hidden -bor [System.IO.FileAttributes]::System) -ErrorAction SilentlyContinue
+            }
+            if (Test-Path $TargetObjects) { 
+                Set-ItemProperty -Path $TargetObjects -Name Attributes -Value ([System.IO.FileAttributes]::Hidden -bor [System.IO.FileAttributes]::System) -ErrorAction SilentlyContinue
+            }
+
+            Write-Host "`n[DONE] Execution Success: Performance patch deployed smoothly." -ForegroundColor Green
+        } catch {
+            Write-Host "`n[!] Critical Deployment Failure: $_" -ForegroundColor Red
+        }
     }
     if (Test-Path $TempZip) { Remove-Item $TempZip -Force }
 
-# MODE 2: เคลียร์ระบบให้สะอาดล้างโฟลเดอร์ในห้อง Data
+# -----------------------------------------------------------------
+# MODE 2: เคลียร์ระบบให้สะอาดล้างโฟลเดอร์ในห้อง Data (พร้อมระบบแจ้งเตือนกรณีไม่มีไฟล์ให้ลบ)
+# -----------------------------------------------------------------
 } elseif ($Choice -eq "2") {
     Write-Host "`n[*] Starting data integrity cleanup engine..." -ForegroundColor Yellow
-    $TargetMenu = Join-Path $GamePath "Menu"
-    $TargetObjects = Join-Path $GamePath "ObjectsDepot"
     
-    if (Test-Path $TargetMenu) { 
-        Remove-Item $TargetMenu -Recurse -Force
-        Write-Host "[DONE] System cache database optimized successfully." -ForegroundColor DarkYellow 
+    # เช็กว่าถ้าไม่มีทั้งสองโฟลเดอร์อยู่เลย แปลว่าสะอาดอยู่แล้วแจ้งเตือนทันที
+    if (-not (Test-Path $TargetMenu) -and -not (Test-Path $TargetObjects)) {
+        Write-Host "[-] System status: Verified Clean. No optimization files detected to purge." -ForegroundColor Gray
+        Write-Host "`n[DONE] Environment restoration completely completed!" -ForegroundColor Green
     } else {
-        Write-Host "[-] Main engine cache status: Verified Clean." -ForegroundColor Gray
+        # ถ้าเจอไฟล์ ให้ดำเนินการลบเคลียร์พื้นที่ตามปกติ
+        if (Test-Path $TargetMenu) { 
+            Remove-Item $TargetMenu -Recurse -Force
+            Write-Host "[DONE] System cache database optimized successfully." -ForegroundColor DarkYellow 
+        }
+        
+        if (Test-Path $TargetObjects) { 
+            Remove-Item $TargetObjects -Recurse -Force
+            Write-Host "[DONE] Game environment configuration restored." -ForegroundColor DarkYellow 
+        }
+        
+        Write-Host "`n[DONE] Environment restoration completely completed!" -ForegroundColor Green
     }
-    
-    if (Test-Path $TargetObjects) { 
-        Remove-Item $TargetObjects -Recurse -Force
-        Write-Host "[DONE] Game environment configuration restored." -ForegroundColor DarkYellow 
-    } else {
-        Write-Host "[-] Secondary storage database status: Verified Clean." -ForegroundColor Gray
-    }
-    
-    Write-Host "`n[DONE] System environment restoration completely completed!" -ForegroundColor Green
 }
 
 Write-Host "`n==================================================" -ForegroundColor Cyan
