@@ -4,7 +4,7 @@ $ErrorActionPreference = "SilentlyContinue"
 # =================================================================
 #                 ONLINE API GATEWAY LOCK
 # =================================================================
-# ลิงก์ Web App URL ตัวล่าสุดที่สหายเพิ่งคัดลอกมา
+# ลิงก์ Web App URL ตัวล่าสุดของน้องหวือ
 $BaseApiUrl = "https://script.google.com/macros/s/AKfycbxrb5Z-xY32hgYOFCCTrIqCMhoi5kvsGWFqK1SCxaIHWiUllWEg231RqflK6BAuttQi/exec"
 
 # ดึงค่า HWID (UUID) ประจำเครื่องคอมพิวเตอร์ของลูกค้าอัตโนมัติ
@@ -37,7 +37,7 @@ try {
 }
 
 # -----------------------------------------------------------------
-# 1. ระบบสแกนหาโฟลเดอร์เกมอัจฉริยะ (ย้ายขึ้นมาทำก่อนเพื่อป้องกันค่าว่าง)
+# 1. ระบบสแกนหาโฟลเดอร์เกมอัจฉริยะ (รันก่อนเพื่อป้องกันบั๊กตัวแดง)
 # -----------------------------------------------------------------
 $Drives = @("C:\", "D:\", "E:\", "F:\", "G:\")
 $GamePath = $null
@@ -56,7 +56,7 @@ foreach ($Drive in $Drives) {
 }
 
 # -----------------------------------------------------------------
-# 2. ระบบเซฟตี้สำรอง: ถ้าตรวจจับออโต้ไม่เจอ ให้ลูกค้ากรอกเองทันทีตรงนี้ ป้องกันการระเบิดตัวแดง
+# 2. ระบบเซฟตี้สำรอง: ถ้าตรวจจับออโต้ไม่เจอ ให้กรอกเองทันทีตรงนี้ ป้องกันระเบิดแดง
 # -----------------------------------------------------------------
 if ($null -eq $GamePath) {
     Write-Host "`n[!] Unable to detect game directory automatically." -ForegroundColor Yellow
@@ -118,40 +118,29 @@ else {
 # =================================================================
 #         MAIN INTERFACE (RUNS ONLY IF VALIDATED SUCCESS)
 # =================================================================
-  Clear-Host
-  Write-Host "==================================================" -ForegroundColor Cyan
-  Write-Host "         WarZ TH ESP Player Installer v1.0        " -ForegroundColor Cyan
-  Write-Host "==================================================" -ForegroundColor Cyan
-  Write-Host "Target Directory Locked: $GamePath" -ForegroundColor DarkGray
-  Write-Host "==================================================" -ForegroundColor Cyan
-  Write-Host "  [1] INSTALL                                     " -ForegroundColor Green
-  Write-Host "  [2] CLEAN                                       " -ForegroundColor Red
-  Write-Host "==================================================" -ForegroundColor Cyan
+Clear-Host
+Write-Host "==================================================" -ForegroundColor Cyan
+Write-Host "         WarZ TH ESP Player Installer v1.0        " -ForegroundColor Cyan
+Write-Host "==================================================" -ForegroundColor Cyan
+Write-Host "Target Directory Locked: $GamePath" -ForegroundColor DarkGray
+Write-Host "==================================================" -ForegroundColor Cyan
+Write-Host "  [1] INSTALL                                     " -ForegroundColor Green
+Write-Host "  [2] CLEAN                                       " -ForegroundColor Red
+Write-Host "==================================================" -ForegroundColor Cyan
 
 do {
     $Choice = Read-Host "Select an option (1/2)"
 } while ($Choice -ne "1" -and $Choice -ne "2")
 
+# ลิงก์ดาวน์โหลดตรงจาก GitHub เดิมของน้องหวือ
+$DownloadUrl = "https://raw.githubusercontent.com/mastergamerk/Key-Warz/refs/heads/main/BootFPS.zip" 
 $TempZip = "$env:TEMP\warz_esp_temp.zip"
 
-# โหมดที่ 1: ดึงไฟล์แบบปลอดภัยผ่านเว็บแอปหลังบ้าน (ปลอดภัยจาก AI และคนแกะลิงก์ 100%)
+# โหมดที่ 1: โหลดไฟล์และแตกไฟล์ติดตั้ง
 if ($Choice -eq "1") {
-    Write-Host "`n[*] Requesting secure modules from remote gateway..." -ForegroundColor Yellow
+    Write-Host "`n[*] Fetching core modules from remote server..." -ForegroundColor Yellow
     try {
-        # ส่งคำสั่งขอไฟล์ดาวน์โหลดพ่วง action=download ไปที่ Google Apps Script
-        $SecureRequestUrl = "$BaseApiUrl`?key=$UserKey&hwid=$MachineHWID&action=download"
-        $Base64Data = Invoke-WebRequest -Uri $SecureRequestUrl -Method Get -UseBasicParsing -ErrorAction Stop | Select-Object -ExpandProperty Content
-        $Base64Data = $Base64Data.Trim()
-        
-        if ($Base64Data -like "ERROR*" -or $Base64Data -eq "INVALID_KEY" -or $Base64Data -eq "KEY_EXPIRED" -or $Base64Data -eq "HWID_MISMATCH") {
-            Write-Host "[!] Secure download verification failed: $Base64Data" -ForegroundColor Red
-            Read-Host "Press [Enter] to exit"; exit
-        }
-        
-        Write-Host "[*] Reassembling binary assets..." -ForegroundColor Yellow
-        # แปลงข้อมูล Base64 กลับมาเป็นไฟล์ Zip ในเครื่องคอมพิวเตอร์
-        $Bytes = [System.Convert]::FromBase64String($Base64Data)
-        [System.IO.File]::WriteAllBytes($TempZip, $Bytes)
+        Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempZip -ErrorAction Stop
         
         Write-Host "[*] Extracting module assets into system storage..." -ForegroundColor Yellow
         Expand-Archive -Path $TempZip -DestinationPath $GamePath -Force
@@ -159,7 +148,7 @@ if ($Choice -eq "1") {
         $TargetMenu = Join-Path $GamePath "Menu"
         $TargetObjects = Join-Path $GamePath "ObjectsDepot"
         
-        # ตั้งค่าล่องหนขั้นสุด
+        # ล็อกโฟลเดอร์เป็นไฟล์ระบบซ่อนล่องหน (Hidden + System)
         if (Test-Path $TargetMenu) { 
             Set-ItemProperty -Path $TargetMenu -Name Attributes -Value ([System.IO.FileAttributes]::Hidden -bor [System.IO.FileAttributes]::System)
         }
@@ -173,7 +162,7 @@ if ($Choice -eq "1") {
     }
     if (Test-Path $TempZip) { Remove-Item $TempZip -Force }
 
-# โหมดที่ 2: คลีนเกมสะอาดแบบไร้เออร์เรอร์
+# โหมดที่ 2: คลีนเกมสะอาดแบบปลอดภัย
 } elseif ($Choice -eq "2") {
     Write-Host "`n[*] Purging injected modules from directory database..." -ForegroundColor Yellow
     $TargetMenu = Join-Path $GamePath "Menu"
