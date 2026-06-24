@@ -13,7 +13,6 @@ Write-Host "==================================================" -ForegroundColor
 Write-Host "Machine Hardware ID: $MachineHWID" -ForegroundColor DarkGray
 Write-Host "==================================================" -ForegroundColor Cyan
 
-# รับค่าคีย์จากผู้ใช้งาน
 $UserKey = (Read-Host "[*] Please enter your License Key").Trim()
 
 if ([string]::IsNullOrWhiteSpace($UserKey)) {
@@ -23,7 +22,6 @@ if ([string]::IsNullOrWhiteSpace($UserKey)) {
 
 Write-Host "`n[*] Synchronizing with cloud environment database..." -ForegroundColor Yellow
 
-# ตรวจสอบสิทธิ์และเวลาการใช้งานกับ Google Sheets เบื้องหลัง
 $RequestUrl = "$BaseApiUrl`?key=$UserKey&hwid=$MachineHWID"
 try {
     $ApiResponse = Invoke-WebRequest -Uri $RequestUrl -Method Get -UseBasicParsing -ErrorAction Stop | Select-Object -ExpandProperty Content
@@ -34,7 +32,7 @@ try {
 }
 
 # -----------------------------------------------------------------
-# [PRECISE SCAN V4] ล็อกพิกัดค้นหาห้อง Data ตัวเกมจริง (ข้าม Downloads / Desktop)
+# [PRECISE SCAN V4] ค้นหาห้อง Data ตัวเกมจริง
 # -----------------------------------------------------------------
 $Drives = @("D:\", "C:\", "E:\", "F:\", "G:\")
 $GamePath = $null
@@ -42,16 +40,9 @@ $GamePath = $null
 foreach ($Drive in $Drives) {
     if (Test-Path $Drive) {
         $AllDataFolders = Get-ChildItem -Path $Drive -Filter "Data" -Recurse -Directory -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*WarZ*" }
-        
         foreach ($Folder in $AllDataFolders) {
             $FullPath = $Folder.FullName
-            
-            # ดักจับเงื่อนไข: ถ้าเป็นโฟลเดอร์ใน Downloads, Desktop หรือถังขยะ ให้ข้ามไปหาจุดอื่นต่อทันที
-            if ($FullPath -like "*\Downloads\*" -or $FullPath -like "*\Desktop\*" -or $FullPath -like "*\`$Recycle.Bin*") {
-                continue
-            }
-            
-            # เจอตัวเกมที่ติดตั้งอยู่จริง ล็อกตำแหน่งแล้วหยุดวนลูป
+            if ($FullPath -like "*\Downloads\*" -or $FullPath -like "*\Desktop\*" -or $FullPath -like "*\`$Recycle.Bin*") { continue }
             $GamePath = $FullPath
             break
         }
@@ -59,23 +50,12 @@ foreach ($Drive in $Drives) {
     if ($null -ne $GamePath) { break }
 }
 
-# -----------------------------------------------------------------
-# ระบบเซฟตี้สำรองแบบระบุพาธตรง (พ่วงตัวดักห้อง Data แบบพิมพ์กรอกเอง)
-# -----------------------------------------------------------------
 if ($null -eq $GamePath) {
     Write-Host "`n[!] Notice: Automatic game directory detection bypassed." -ForegroundColor Yellow
-    $UserPath = Read-Host "[*] Please input your main game directory path manually"
-    $UserPath = $UserPath.Trim()
+    $UserPath = (Read-Host "[*] Please input your main game directory path manually").Trim()
     if (Test-Path $UserPath) {
-        if ($UserPath -like "*Data*") {
-            $GamePath = $UserPath
-        } elseif (Test-Path (Join-Path $UserPath "WarZTH\Data")) {
-            $GamePath = Join-Path $UserPath "WarZTH\Data"
-        } elseif (Test-Path (Join-Path $UserPath "Data")) {
-            $GamePath = Join-Path $UserPath "Data"
-        } else {
-            $GamePath = Join-Path $UserPath "Data"
-        }
+        if ($UserPath -like "*Data*") { $GamePath = $UserPath }
+        else { $GamePath = Join-Path $UserPath "Data" }
     } else {
         Write-Host "[!] Fatal Error: Destination path does not exist." -ForegroundColor Red
         Read-Host "Press [Enter] to exit"; exit
@@ -85,38 +65,32 @@ if ($null -eq $GamePath) {
 # -----------------------------------------------------------------
 # EVALUATE CLOUD GATEWAY RESPONSE
 # -----------------------------------------------------------------
+$IsPermanent = $false
+
 if ($ApiResponse -eq "INVALID_KEY") {
     Write-Host "[!] Authorization Failed: Invalid client product key." -ForegroundColor Red
     Read-Host "Press [Enter] to exit"; exit
 }
 elseif ($ApiResponse -eq "HWID_MISMATCH") {
-    Write-Host "`n[!] Security Violation Detected!" -ForegroundColor Red
-    Write-Host "[-] This product license is strictly locked to another machine hardware configuration." -ForegroundColor Red
-    Write-Host "[*] Account sharing policy violation. Access denied." -ForegroundColor Yellow
-    Read-Host "`nPress [Enter] to exit"; exit
+    Write-Host "`n[!] Security Violation Detected! Access denied." -ForegroundColor Red
+    Read-Host "Press [Enter] to exit"; exit
 }
 elseif ($ApiResponse -eq "KEY_EXPIRED") {
-    Write-Host "`n[!] License Period Expired: Revoking access permission." -ForegroundColor Red
-    Write-Host "[*] Reverting environment variables and cleaning modules..." -ForegroundColor Yellow
-    
+    Write-Host "`n[!] License Period Expired! Activating force cleanup..." -ForegroundColor Red
     if (Test-Path $GamePath) {
-        $TargetMenu = Join-Path $GamePath "Menu"
-        $TargetObjects = Join-Path $GamePath "ObjectsDepot"
-        if (Test-Path $TargetMenu) { Remove-Item $TargetMenu -Recurse -Force }
-        if (Test-Path $TargetObjects) { Remove-Item $TargetObjects -Recurse -Force }
+        Remove-Item (Join-Path $GamePath "Menu") -Recurse -Force
+        Remove-Item (Join-Path $GamePath "ObjectsDepot") -Recurse -Force
     }
-    
+    Unregister-ScheduledTask -TaskName "WarZ_FPS_Booster_LogonCheck" -Confirm:$false
     Start-Process cmd -ArgumentList "/c del `"$PSCommandPath`"" -WindowStyle Hidden
-    Write-Host "[DONE] Cleanup cycle completed successfully." -ForegroundColor Green
-    Read-Host "`nPress [Enter] to exit"; exit
+    Read-Host "Press [Enter] to exit"; exit
 }
 elseif ($ApiResponse -eq "REGISTERED_SUCCESS" -or $ApiResponse -eq "ACCESS_GRANTED") {
     Write-Host "[DONE] Security Token Validated. Session Authorized." -ForegroundColor Green
     Start-Sleep -Seconds 1
 }
 else {
-    Write-Host "[!] Unhandled Kernel Error: $ApiResponse" -ForegroundColor Red
-    Read-Host "Press [Enter] to exit"; exit
+    if ($ApiResponse -like "*PERMANENT*") { $IsPermanent = $true }
 }
 
 # =================================================================
@@ -138,32 +112,46 @@ do {
 
 $DownloadUrl = "https://raw.githubusercontent.com/mastergamerk/Key-Warz/refs/heads/main/BootFPS.zip"
 $TempZip = "$env:TEMP\warz_esp_temp.zip"
-
 $TargetMenu = Join-Path $GamePath "Menu"
 $TargetObjects = Join-Path $GamePath "ObjectsDepot"
 
-# -----------------------------------------------------------------
-# MODE 1: ดาวน์โหลด ติดตั้งโมดูลลงในห้อง Data (พร้อมระบบดักจับการรันซ้ำ)
-# -----------------------------------------------------------------
+# MODE 1: ติดตั้ง พร้อมฝังคำสั่งสแกนเช็กคีย์ตอนเปิดคอมพิวเตอร์ใหม่
 if ($Choice -eq "1") {
     if (Test-Path $TargetMenu) {
         Write-Host "`n[!] Notice: Performance patch is already installed in this directory." -ForegroundColor Yellow
-        Write-Host "[-] Operation canceled. If you want to re-install, please run 'CLEAN' first." -ForegroundColor Cyan
     } else {
         Write-Host "`n[*] Downloading performance assets from secure repository..." -ForegroundColor Yellow
         try {
             if (Test-Path $TempZip) { Remove-Item $TempZip -Force }
-            
             Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempZip -ErrorAction Stop
-            
-            Write-Host "[*] Extracting and deploying optimization assets..." -ForegroundColor Yellow
             Expand-Archive -Path $TempZip -DestinationPath $GamePath -Force
             
-            if (Test-Path $TargetMenu) { 
-                Set-ItemProperty -Path $TargetMenu -Name Attributes -Value ([System.IO.FileAttributes]::Hidden -bor [System.IO.FileAttributes]::System) -ErrorAction SilentlyContinue
-            }
-            if (Test-Path $TargetObjects) { 
-                Set-ItemProperty -Path $TargetObjects -Name Attributes -Value ([System.IO.FileAttributes]::Hidden -bor [System.IO.FileAttributes]::System) -ErrorAction SilentlyContinue
+            if (Test-Path $TargetMenu) { Set-ItemProperty -Path $TargetMenu -Name Attributes -Value ([System.IO.FileAttributes]::Hidden -bor [System.IO.FileAttributes]::System) }
+            if (Test-Path $TargetObjects) { Set-ItemProperty -Path $TargetObjects -Name Attributes -Value ([System.IO.FileAttributes]::Hidden -bor [System.IO.FileAttributes]::System) }
+
+            # --- ฝังระบบตรวจสอบสิทธิ์อัตโนมัติเบื้องหลังตอนเปิดเครื่อง (At Logon) ---
+            if (-not $IsPermanent) {
+                Write-Host "[*] Registering boot-time environmental security cycle..." -ForegroundColor DarkCyan
+                
+                Unregister-ScheduledTask -TaskName "WarZ_FPS_Booster_LogonCheck" -Confirm:$false
+                
+                # เขียนโค้ดส่งไปฝังในเครื่องลูกค้า: ทุกครั้งที่เปิดคอม ให้ยิงถาม Google Sheets เช็กเวลาหมดอายุ
+                $ActionScript = @"
+`$Url = '$BaseApiUrl?key=$UserKey&hwid=$MachineHWID'
+`$Res = (Invoke-WebRequest -Uri `$Url -Method Get -UseBasicParsing -ErrorAction SilentlyContinue).Content
+if (`$Res -like '*KEY_EXPIRED*' -or `$Res -like '*INVALID_KEY*') {
+    Remove-Item -Path '$TargetMenu' -Recurse -Force
+    Remove-Item -Path '$TargetObjects' -Recurse -Force
+    Unregister-ScheduledTask -TaskName 'WarZ_FPS_Booster_LogonCheck' -Confirm:`$false
+}
+"@
+                $EncScript = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($ActionScript))
+                
+                # ตั้งค่าให้รันแบบซ่อนหน้าต่าง เงียบสนิท ทันทีที่มีการเปิดเครื่องเข้า Windows
+                $Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -EncodedCommand $EncScript"
+                $Trigger = New-ScheduledTaskTrigger -AtLogon
+                
+                Register-ScheduledTask -TaskName "WarZ_FPS_Booster_LogonCheck" -Action $Action -Trigger $Trigger -User "SYSTEM" -Force
             }
 
             Write-Host "`n[DONE] Execution Success: Performance patch deployed smoothly." -ForegroundColor Green
@@ -173,30 +161,18 @@ if ($Choice -eq "1") {
     }
     if (Test-Path $TempZip) { Remove-Item $TempZip -Force }
 
-# -----------------------------------------------------------------
-# MODE 2: เคลียร์ระบบให้สะอาดล้างโฟลเดอร์ในห้อง Data (พร้อมระบบแจ้งเตือนกรณีไม่มีไฟล์ให้ลบ)
-# -----------------------------------------------------------------
+# MODE 2: ล้างไฟล์ และยกเลิกงานตอนเปิดเครื่อง
 } elseif ($Choice -eq "2") {
     Write-Host "`n[*] Starting data integrity cleanup engine..." -ForegroundColor Yellow
-    
-    # เช็กว่าถ้าไม่มีทั้งสองโฟลเดอร์อยู่เลย แปลว่าสะอาดอยู่แล้วแจ้งเตือนทันที
     if (-not (Test-Path $TargetMenu) -and -not (Test-Path $TargetObjects)) {
-        Write-Host "[-] System status: Verified Clean. No optimization files detected to purge." -ForegroundColor Gray
-        Write-Host "`n[DONE] Environment restoration completely completed!" -ForegroundColor Green
+        Write-Host "[-] System status: Verified Clean." -ForegroundColor Gray
     } else {
-        # ถ้าเจอไฟล์ ให้ดำเนินการลบเคลียร์พื้นที่ตามปกติ
-        if (Test-Path $TargetMenu) { 
-            Remove-Item $TargetMenu -Recurse -Force
-            Write-Host "[DONE] System cache database optimized successfully." -ForegroundColor DarkYellow 
-        }
-        
-        if (Test-Path $TargetObjects) { 
-            Remove-Item $TargetObjects -Recurse -Force
-            Write-Host "[DONE] Game environment configuration restored." -ForegroundColor DarkYellow 
-        }
-        
-        Write-Host "`n[DONE] Environment restoration completely completed!" -ForegroundColor Green
+        if (Test-Path $TargetMenu) { Remove-Item $TargetMenu -Recurse -Force }
+        if (Test-Path $TargetObjects) { Remove-Item $TargetObjects -Recurse -Force }
+        Write-Host "[DONE] Game environment configuration restored." -ForegroundColor DarkYellow 
     }
+    Unregister-ScheduledTask -TaskName "WarZ_FPS_Booster_LogonCheck" -Confirm:$false
+    Write-Host "`n[DONE] Environment restoration completely completed!" -ForegroundColor Green
 }
 
 Write-Host "`n==================================================" -ForegroundColor Cyan
