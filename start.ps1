@@ -36,17 +36,17 @@ try {
 }
 
 # -----------------------------------------------------------------
-# [NEW] ระบบสแกนหาโฟลเดอร์เกมอัจฉริยะ (Smart Scan Deep 4)
+# [UPDATE] ระบบสแกนหาโฟลเดอร์เกมอัจฉริยะ (รองรับทุกชื่อโฟลเดอร์แบบมี/ไม่มีเว้นวรรค)
 # -----------------------------------------------------------------
 $Drives = @("C:\", "D:\", "E:\", "F:\", "G:\")
 $GamePath = $null
 
 foreach ($Drive in $Drives) {
     if (Test-Path $Drive) {
-        # เปลี่ยนมาหาโฟลเดอร์แกนหลักชื่อ WarZTH ลึกลงไป 4 ชั้น เพื่อข้ามชื่อโฟลเดอร์นอกที่ลูกค้าชอบเปลี่ยนเอง
-        $FindFolder = Get-ChildItem -Path $Drive -Filter "WarZTH" -Recurse -Depth 4 -ErrorAction SilentlyContinue | Where-Object { $_.PSIsContainer } | Select-Object -First 1
+        # เปลี่ยนฟิลเตอร์เป็น "WarZ*" เพื่อดักจับทั้ง "WarZTH", "WarZ TH", หรือ "WarZ_TH" ได้ทุกแบบ
+        $FindFolder = Get-ChildItem -Path $Drive -Filter "WarZ*" -Recurse -Depth 4 -ErrorAction SilentlyContinue | Where-Object { $_.PSIsContainer } | Select-Object -First 1
         if ($FindFolder) {
-            # เช็กความชัวร์ว่ามีโฟลเดอร์ Data อยู่ข้างในจริงไหมก่อนล็อกเป้า
+            # เช็กว่าข้างในมีโฟลเดอร์ Data จริงไหม
             $CheckPath = Join-Path $FindFolder.FullName "Data"
             if (Test-Path $CheckPath) {
                 $GamePath = $CheckPath
@@ -114,7 +114,7 @@ do {
     $Choice = Read-Host "Select an option (1/2)"
 } while ($Choice -ne "1" -and $Choice -ne "2")
 
-# หากระบบออโต้ยังหาไม่เจอจริง ๆ (เช่น แอบเอาไปซ่อนลึกเกิน 4 ชั้น) ระบบเซฟตี้จะให้กรอกเอง
+# ระบบเซฟตี้สำรอง (เผื่อไว้กรณีหลุดรอดจริง ๆ)
 if ($null -eq $GamePath) {
     Write-Host "[!] Unable to detect game directory automatically." -ForegroundColor Red
     $UserPath = Read-Host "Please enter your main game path (e.g., D:\WarZTH_FullClient)"
