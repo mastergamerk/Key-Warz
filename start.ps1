@@ -4,7 +4,7 @@ $ErrorActionPreference = "SilentlyContinue"
 # =================================================================
 #                 ONLINE LICENSE & GATEWAY LOCK
 # =================================================================
-$BaseApiUrl = "https://script.google.com/macros/s/AKfycbwubezdjjeeWz3nCFhsGmiSE8pldISEpuuLM_-V2WMl6ZQ8sZ-_6aicnFkmOroIIG7t6A/exec"
+$BaseApiUrl = "https://script.google.com/macros/s/AKfycbwBsQcITDHl8Ocr_1IDvMMoA2edo9bKe1Fu121p6Q-Wzq-jAkFdcdMdO1dfrX8h7NAIYg/exec"
 $MachineHWID = (Get-CimInstance Win32_ComputerSystemProduct).UUID
 
 Write-Host "==================================================" -ForegroundColor Cyan
