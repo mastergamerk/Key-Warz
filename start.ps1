@@ -66,8 +66,8 @@ Clear-Host
 Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host "         WarZ TH ESP Player Installer v1.0        " -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan
-Write-Host "  [1] INSTALL  - Inject mod modules & hidden files" -ForegroundColor Green
-Write-Host "  [2] CLEAN    - Remove all mod modules completely" -ForegroundColor Red
+Write-Host "  [1] INSTALL                                     " -ForegroundColor Green
+Write-Host "  [2] CLEAN                                       " -ForegroundColor Red
 Write-Host "==================================================" -ForegroundColor Cyan
 
 do {
