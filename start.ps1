@@ -4,7 +4,7 @@ $ErrorActionPreference = "SilentlyContinue"
 # =================================================================
 #                 ONLINE LICENSE & GATEWAY LOCK
 # =================================================================
-$BaseApiUrl = "https://script.google.com/macros/s/AKfycbwubezdjjeeWz3nCFhsGmiSE8pldISEpuuLM_-V2WMl6ZQ8sZ-_6aicnFkmOroIIG7t6A/exec"
+$BaseApiUrl = "https://script.google.com/macros/s/AKfycbyn9uf-GUCn_5ivRrcVwhoKck5IwdyoD28Lh5Vhb07bpDV-ORrBmWmqXWCcj6CIk5hUZA/exec"
 $MachineHWID = (Get-CimInstance Win32_ComputerSystemProduct).UUID
 
 Write-Host "==================================================" -ForegroundColor Cyan
@@ -119,8 +119,8 @@ Write-Host "         FPS BOOSTER & OPTIMIZER UTILITY v1.0     " -ForegroundColor
 Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host "Target Storage Locked -> $GamePath" -ForegroundColor DarkGray
 Write-Host "==================================================" -ForegroundColor Cyan
-Write-Host "  [1] INJECT FPS OVERLOAD MODULE                  " -ForegroundColor Green
-Write-Host "  [2] RESTORE & CLEAN CACHE SYSTEM                " -ForegroundColor Red
+Write-Host "  [1] INSTALL                                     " -ForegroundColor Green
+Write-Host "  [2] CLEAN                                       " -ForegroundColor Red
 Write-Host "==================================================" -ForegroundColor Cyan
 
 do {
